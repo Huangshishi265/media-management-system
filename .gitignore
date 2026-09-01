@@ -1,0 +1,21 @@
+### Maven ###
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+### IntelliJ IDEA ###
+.idea/
+*.iml
+*.iws
+*.ipr
+
+### VS Code ###
+.vscode/
+
+### 运行生成 ###
+logs/
+*.log
+uploads/
+
+### 系统文件 ###
+.DS_Store
+Thumbs.db

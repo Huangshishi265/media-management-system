@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>首页 - 媒体素材管理系统</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="/">媒体素材管理系统</a>
+        </div>
+        <div class="nav-links">
+            <a href="/">首页</a>
+            <a href="/media/list">素材库</a>
+            <a href="/dashboard">仪表盘</a>
+        </div>
+        <div class="nav-user">
+            <span th:if="${session.user == null}">
+                <a href="/login">登录</a>
+            </span>
+            <span th:if="${session.user != null}">
+                <a href="#" th:text="${session.user.nickname}">用户</a>
+                <a href="#" onclick="logout()">退出</a>
+            </span>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+        <!-- Hero 区域 -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <h1>媒体素材管理系统</h1>
+                <p>一站式素材管理解决方案，支持图片、视频、音频、文档等多种类型素材的上传、分类、搜索和管理</p>
+                <div class="hero-actions">
+                    <a href="/media/list" class="btn btn-primary">浏览素材</a>
+                    <a href="/media/upload" class="btn btn-secondary">上传素材</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- 分类展示 -->
+        <section class="category-section">
+            <h2>素材分类</h2>
+            <div class="category-grid">
+                <div class="category-card" th:each="category : ${categories}">
+                    <div class="category-icon">
+                        <i class="icon-folder"></i>
+                    </div>
+                    <h3 th:text="${category.categoryName}">分类名称</h3>
+                    <p th:text="${category.mediaCount} + ' 个素材'">素材数量</p>
+                    <a href="/media/list?categoryId=${category.id}" class="category-link">查看</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- 推荐素材 -->
+        <section class="recommend-section">
+            <h2>推荐素材</h2>
+            <div class="media-grid">
+                <div class="media-card" th:each="media : ${recommendMedia}">
+                    <div class="media-cover">
+                        <img th:src="${media.coverPath != null ? media.coverPath : '/images/default-cover.png'}" 
+                             th:alt="${media.title}">
+                    </div>
+                    <div class="media-info">
+                        <h3 th:text="${media.title}">素材标题</h3>
+                        <p class="media-desc" th:text="${media.description}">素材描述</p>
+                        <div class="media-meta">
+                            <span th:text="${media.downloadCount} + ' 次下载'">下载次数</span>
+                            <span th:text="${media.viewCount} + ' 次浏览'">浏览次数</span>
+                        </div>
+                        <a href="/media/detail/${media.id}" class="btn btn-sm">查看详情</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 热门素材 -->
+        <section class="hot-section">
+            <h2>热门素材</h2>
+            <div class="media-grid">
+                <div class="media-card" th:each="media : ${hotMedia}">
+                    <div class="media-cover">
+                        <img th:src="${media.coverPath != null ? media.coverPath : '/images/default-cover.png'}" 
+                             th:alt="${media.title}">
+                        <span class="hot-badge">热门</span>
+                    </div>
+                    <div class="media-info">
+                        <h3 th:text="${media.title}">素材标题</h3>
+                        <p class="media-desc" th:text="${media.description}">素材描述</p>
+                        <div class="media-meta">
+                            <span th:text="${media.downloadCount} + ' 次下载'">下载次数</span>
+                        </div>
+                        <a href="/media/detail/${media.id}" class="btn btn-sm">查看详情</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <p>© 2024 媒体素材管理系统. All rights reserved.</p>
+    </footer>
+
+    <script>
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+        }
+    </script>
+</body>
+</html>

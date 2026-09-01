@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>素材列表 - 媒体素材管理系统</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="/">媒体素材管理系统</a>
+        </div>
+        <div class="nav-links">
+            <a href="/">首页</a>
+            <a href="/media/list">素材库</a>
+            <a href="/dashboard">仪表盘</a>
+        </div>
+        <div class="nav-user">
+            <a href="/media/upload" class="btn btn-sm">上传素材</a>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <main class="media-list-content">
+        <!-- 搜索和筛选 -->
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" id="searchTitle" placeholder="搜索素材标题...">
+                <button onclick="searchMedia()">搜索</button>
+            </div>
+            <div class="filter-box">
+                <select id="filterCategory">
+                    <option value="">所有分类</option>
+                    <option th:each="cat : ${categories}" 
+                            th:value="${cat.id}" 
+                            th:text="${cat.categoryName}">分类</option>
+                </select>
+                <select id="filterType">
+                    <option value="">所有类型</option>
+                    <option value="image">图片</option>
+                    <option value="video">视频</option>
+                    <option value="audio">音频</option>
+                    <option value="document">文档</option>
+                </select>
+                <select id="filterStatus">
+                    <option value="">所有状态</option>
+                    <option value="1">上架</option>
+                    <option value="0">下架</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 素材列表 -->
+        <div class="media-grid" id="mediaList">
+            <!-- 素材卡片将通过 JavaScript 动态加载 -->
+            <div class="loading">加载中...</div>
+        </div>
+
+        <!-- 分页 -->
+        <div class="pagination" id="pagination">
+            <!-- 分页将通过 JavaScript 动态生成 -->
+        </div>
+    </main>
+
+    <script>
+        let currentPage = 1;
+        let pageSize = 12;
+        
+        // 加载素材列表
+        async function loadMediaList(page = 1) {
+            currentPage = page;
+            const title = document.getElementById('searchTitle').value;
+            const categoryId = document.getElementById('filterCategory').value;
+            const mediaType = document.getElementById('filterType').value;
+            const status = document.getElementById('filterStatus').value;
+            
+            try {
+                const params = new URLSearchParams({
+                    pageNum: page,
+                    pageSize: pageSize
+                });
+                if (title) params.append('title', title);
+                if (categoryId) params.append('categoryId', categoryId);
+                if (mediaType) params.append('mediaType', mediaType);
+                if (status) params.append('status', status);
+                
+                const response = await fetch(`/api/media/page?${params}`);
+                const result = await response.json();
+                
+                if (result.code === 200) {
+                    renderMediaList(result.data.list);
+                    renderPagination(result.data.pages, result.data.pageNum);
+                }
+            } catch (error) {
+                console.error('加载失败:', error);
+                document.getElementById('mediaList').innerHTML = '<div class="error">加载失败，请稍后重试</div>';
+            }
+        }
+        
+        // 渲染素材列表
+        function renderMediaList(mediaList) {
+            const container = document.getElementById('mediaList');
+            if (!mediaList || mediaList.length === 0) {
+                container.innerHTML = '<div class="no-data">暂无素材</div>';
+                return;
+            }
+            
+            container.innerHTML = mediaList.map(media => `
+                <div class="media-card">
+                    <div class="media-cover">
+                        <img src="${media.coverPath || '/images/default-cover.png'}" alt="${media.title}">
+                        <span class="media-type-badge ${media.mediaType}">${media.mediaType}</span>
+                    </div>
+                    <div class="media-info">
+                        <h3>${media.title}</h3>
+                        <p class="media-desc">${media.description || '暂无描述'}</p>
+                        <div class="media-tags">
+                            ${media.tags ? media.tags.split(',').map(tag => `<span class="tag">${tag}</span>`).join('') : ''}
+                        </div>
+                        <div class="media-meta">
+                            <span>${media.downloadCount || 0} 次下载</span>
+                            <span>${media.viewCount || 0} 次浏览</span>
+                        </div>
+                        <div class="media-actions">
+                            <a href="/media/detail/${media.id}" class="btn btn-sm">查看</a>
+                            <button onclick="downloadMedia(${media.id})" class="btn btn-sm btn-secondary">下载</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 渲染分页
+        function renderPagination(totalPages, currentPage) {
+            const container = document.getElementById('pagination');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadMediaList(${i})">${i}</button>`;
+            }
+            container.innerHTML = html;
+        }
+        
+        // 搜索
+        function searchMedia() {
+            loadMediaList(1);
+        }
+        
+        // 下载素材
+        async function downloadMedia(id) {
+            try {
+                await fetch(`/api/media/${id}/download`, { method: 'POST' });
+                const media = await fetch(`/api/media/${id}`).then(r => r.json());
+                if (media.data.filePath) {
+                    window.open(`/uploads/${media.data.filePath}`, '_blank');
+                }
+            } catch (error) {
+                alert('下载失败');
+            }
+        }
+        
+        // 页面加载完成后加载列表
+        document.addEventListener('DOMContentLoaded', () => loadMediaList(1));
+        
+        // 筛选条件变化时重新加载
+        document.getElementById('filterCategory').addEventListener('change', () => loadMediaList(1));
+        document.getElementById('filterType').addEventListener('change', () => loadMediaList(1));
+        document.getElementById('filterStatus').addEventListener('change', () => loadMediaList(1));
+    </script>
+</body>
+</html>
