@@ -75,8 +75,8 @@ public class SecurityConfig {
                 .requestMatchers("/druid/**").permitAll()
                 // API 接口需要认证
                 .requestMatchers("/api/**").authenticated()
-                // 其他页面需要认证
-                .anyRequest().authenticated())
+                // 其余页面（Thymeleaf 视图）放行，数据安全由 /api/** 的 JWT 鉴权保证
+                .anyRequest().permitAll())
             
             // 添加 JWT 过滤器
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

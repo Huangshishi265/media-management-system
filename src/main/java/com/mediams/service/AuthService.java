@@ -1,51 +1,31 @@
 package com.mediams.service;
 
-import com.mediams.dto.PageResult;
+import com.mediams.dto.LoginRequest;
+import com.mediams.dto.LoginResponse;
 import com.mediams.entity.User;
-import com.baomidou.mybatisplus.extension.service.IService;
 
 /**
- * 用户服务接口
+ * 认证服务接口
  */
-public interface UserService extends IService<User> {
+public interface AuthService {
 
     /**
-     * 根据用户名查询用户
+     * 用户登录
      */
-    User getByUsername(String username);
+    LoginResponse login(LoginRequest request);
 
     /**
-     * 创建用户
+     * 用户注册
      */
-    User createUser(User user);
+    boolean register(User user);
 
     /**
-     * 更新用户
+     * 刷新 Token
      */
-    User updateUser(User user);
+    String refreshToken(String token);
 
     /**
-     * 删除用户
+     * 退出登录
      */
-    boolean deleteUser(Long id);
-
-    /**
-     * 分页查询用户
-     */
-    PageResult<User> pageList(Integer pageNum, Integer pageSize, String username, Integer status);
-
-    /**
-     * 更新用户状态
-     */
-    boolean updateStatus(Long id, Integer status);
-
-    /**
-     * 重置密码
-     */
-    boolean resetPassword(Long id, String newPassword);
-
-    /**
-     * 分配角色
-     */
-    boolean assignRoles(Long userId, Long[] roleIds);
+    void logout(String token);
 }

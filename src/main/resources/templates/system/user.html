@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 媒体素材管理系统</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand"><a href="/">媒体素材管理系统</a></div>
+        <div class="nav-links">
+            <a href="/">首页</a>
+            <a href="/media/list">素材库</a>
+            <a href="/dashboard">仪表盘</a>
+            <a href="/media/category">分类管理</a>
+            <a href="/system/user">用户管理</a>
+            <a href="/system/role">角色管理</a>
+            <a href="/system/menu">菜单管理</a>
+        </div>
+        <div class="nav-user"><a href="#" onclick="logout()">退出</a></div>
+    </nav>
+
+    <main class="dashboard-content">
+        <div class="dashboard-header">
+            <h1>用户管理</h1>
+            <p>维护系统用户，支持新增、编辑、禁用、重置密码</p>
+        </div>
+
+        <div class="search-section">
+            <div class="search-box">
+                <input type="text" id="searchUsername" placeholder="搜索用户名...">
+                <button onclick="loadUsers(1)">搜索</button>
+            </div>
+            <button class="btn btn-primary" onclick="openCreate()">+ 新增用户</button>
+        </div>
+
+        <div class="hot-media-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>用户名</th>
+                        <th>昵称</th>
+                        <th>邮箱</th>
+                        <th>状态</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="userBody">
+                    <tr><td colspan="7" class="loading">加载中...</td></tr>
+                </tbody>
+            </table>
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </main>
+
+    <!-- 编辑模态框 -->
+    <div id="editModal" class="modal" style="display:none;">
+        <div class="login-container" style="background:#fff;">
+            <h2 id="modalTitle" style="margin-bottom:20px;">新增用户</h2>
+            <input type="hidden" id="editId">
+            <div class="form-group" id="usernameGroup"><label>用户名</label><input type="text" id="username" placeholder="登录用户名"></div>
+            <div class="form-group" id="passwordGroup"><label>密码</label><input type="password" id="password" placeholder="登录密码"></div>
+            <div class="form-group"><label>昵称</label><input type="text" id="nickname" placeholder="显示昵称"></div>
+            <div class="form-group"><label>邮箱</label><input type="email" id="email" placeholder="邮箱"></div>
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-primary" onclick="saveUser()">保存</button>
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+
+        async function loadUsers(page) {
+            currentPage = page;
+            const username = document.getElementById('searchUsername').value;
+            const params = new URLSearchParams({ pageNum: page, pageSize: 10 });
+            if (username) params.append('username', username);
+            const r = await fetch('/api/system/user/page?' + params).then(x => x.json());
+            const body = document.getElementById('userBody');
+            if (r.code !== 200 || !r.data || !r.data.list || !r.data.list.length) {
+                body.innerHTML = '<tr><td colspan="7" class="no-data">暂无用户</td></tr>';
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            totalPages = Number(r.data.pages) || 1;
+            body.innerHTML = r.data.list.map(u => `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.username || ''}</td>
+                    <td>${u.nickname || ''}</td>
+                    <td>${u.email || ''}</td>
+                    <td>${u.status === 1 ? '正常' : '禁用'}</td>
+                    <td>${u.createTime || ''}</td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="openEdit(${u.id})">编辑</button>
+                        <button class="btn btn-sm" onclick="toggleStatus(${u.id}, ${u.status})">${u.status === 1 ? '禁用' : '启用'}</button>
+                        <button class="btn btn-sm" onclick="resetPwd(${u.id})">重置密码</button>
+                        <button class="btn btn-sm" onclick="deleteUser(${u.id})">删除</button>
+                    </td>
+                </tr>`).join('');
+            renderPagination();
+        }
+
+        function renderPagination() {
+            const c = document.getElementById('pagination');
+            if (totalPages <= 1) { c.innerHTML = ''; return; }
+            let html = '';
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadUsers(${i})">${i}</button>`;
+            }
+            c.innerHTML = html;
+        }
+
+        function openCreate() {
+            document.getElementById('modalTitle').textContent = '新增用户';
+            document.getElementById('editId').value = '';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('nickname').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('usernameGroup').style.display = 'block';
+            document.getElementById('passwordGroup').style.display = 'block';
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        async function openEdit(id) {
+            const r = await fetch('/api/system/user/' + id).then(x => x.json());
+            if (r.code !== 200) { alert('加载失败'); return; }
+            const u = r.data;
+            document.getElementById('modalTitle').textContent = '编辑用户';
+            document.getElementById('editId').value = u.id;
+            document.getElementById('username').value = u.username;
+            document.getElementById('nickname').value = u.nickname || '';
+            document.getElementById('email').value = u.email || '';
+            document.getElementById('usernameGroup').style.display = 'none';
+            document.getElementById('passwordGroup').style.display = 'none';
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        async function saveUser() {
+            const id = document.getElementById('editId').value;
+            const payload = { nickname: document.getElementById('nickname').value, email: document.getElementById('email').value };
+            if (!id) {
+                payload.username = document.getElementById('username').value;
+                payload.password = document.getElementById('password').value;
+                if (!payload.username || !payload.password) { alert('请输入用户名和密码'); return; }
+            }
+            const url = id ? '/api/system/user/' + id : '/api/system/user';
+            const method = id ? 'PUT' : 'POST';
+            const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(x => x.json());
+            if (r.code === 200) { closeModal(); loadUsers(currentPage); } else { alert(r.message || '保存失败'); }
+        }
+
+        async function toggleStatus(id, current) {
+            const next = current === 1 ? 0 : 1;
+            const r = await fetch(`/api/system/user/${id}/status?status=${next}`, { method: 'PUT' }).then(x => x.json());
+            if (r.code === 200) { loadUsers(currentPage); } else { alert(r.message || '操作失败'); }
+        }
+
+        async function resetPwd(id) {
+            const pwd = prompt('请输入新密码（至少 6 位）:');
+            if (!pwd) return;
+            const r = await fetch(`/api/system/user/${id}/password?newPassword=${encodeURIComponent(pwd)}`, { method: 'PUT' }).then(x => x.json());
+            if (r.code === 200) { alert('密码重置成功'); } else { alert(r.message || '重置失败'); }
+        }
+
+        async function deleteUser(id) {
+            if (!confirm('确定删除该用户吗？')) return;
+            const r = await fetch('/api/system/user/' + id, { method: 'DELETE' }).then(x => x.json());
+            if (r.code === 200) { loadUsers(currentPage); } else { alert(r.message || '删除失败'); }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => loadUsers(1));
+    </script>
+</body>
+</html>

@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 角色服务实现
@@ -103,7 +104,14 @@ public class RoleServiceImpl extends ServiceImpl<RoleMapper, Role> implements Ro
                 roleMenuMapper.insert(roleMenu);
             });
         }
-        
+
         return true;
+    }
+
+    @Override
+    public List<Long> getMenusByRoleId(Long roleId) {
+        List<RoleMenu> roleMenus = roleMenuMapper.selectList(
+                new LambdaQueryWrapper<RoleMenu>().eq(RoleMenu::getRoleId, roleId));
+        return roleMenus.stream().map(RoleMenu::getMenuId).collect(Collectors.toList());
     }
 }

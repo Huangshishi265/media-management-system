@@ -63,7 +63,7 @@
             <div class="media-grid">
                 <div class="media-card" th:each="media : ${recommendMedia}">
                     <div class="media-cover">
-                        <img th:src="${media.coverPath != null ? media.coverPath : '/images/default-cover.png'}" 
+                        <img th:src="${media.coverPath != null ? media.coverPath : '/images/default-cover.svg'}" 
                              th:alt="${media.title}">
                     </div>
                     <div class="media-info">
@@ -85,7 +85,7 @@
             <div class="media-grid">
                 <div class="media-card" th:each="media : ${hotMedia}">
                     <div class="media-cover">
-                        <img th:src="${media.coverPath != null ? media.coverPath : '/images/default-cover.png'}" 
+                        <img th:src="${media.coverPath != null ? media.coverPath : '/images/default-cover.svg'}" 
                              th:alt="${media.title}">
                         <span class="hot-badge">热门</span>
                     </div>

@@ -64,6 +64,7 @@
         </div>
     </main>
 
+    <script src="/js/auth.js"></script>
     <script>
         let currentPage = 1;
         let pageSize = 12;
@@ -110,7 +111,7 @@
             container.innerHTML = mediaList.map(media => `
                 <div class="media-card">
                     <div class="media-cover">
-                        <img src="${media.coverPath || '/images/default-cover.png'}" alt="${media.title}">
+                        <img src="${media.coverPath || '/images/default-cover.svg'}" alt="${media.title}">
                         <span class="media-type-badge ${media.mediaType}">${media.mediaType}</span>
                     </div>
                     <div class="media-info">

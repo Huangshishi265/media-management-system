@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>菜单管理 - 媒体素材管理系统</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand"><a href="/">媒体素材管理系统</a></div>
+        <div class="nav-links">
+            <a href="/">首页</a>
+            <a href="/media/list">素材库</a>
+            <a href="/dashboard">仪表盘</a>
+            <a href="/media/category">分类管理</a>
+            <a href="/system/user">用户管理</a>
+            <a href="/system/role">角色管理</a>
+            <a href="/system/menu">菜单管理</a>
+        </div>
+        <div class="nav-user"><a href="#" onclick="logout()">退出</a></div>
+    </nav>
+
+    <main class="dashboard-content">
+        <div class="dashboard-header">
+            <h1>菜单管理</h1>
+            <p>维护系统菜单树，支持目录、菜单、按钮三种类型</p>
+        </div>
+
+        <div class="search-section">
+            <button class="btn btn-primary" onclick="openCreate()">+ 新增菜单</button>
+        </div>
+
+        <div class="hot-media-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>菜单名称</th>
+                        <th>类型</th>
+                        <th>路径</th>
+                        <th>权限标识</th>
+                        <th>排序</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="menuBody">
+                    <tr><td colspan="7" class="loading">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- 编辑模态框 -->
+    <div id="editModal" class="modal" style="display:none;">
+        <div class="login-container" style="background:#fff;">
+            <h2 id="modalTitle" style="margin-bottom:20px;">新增菜单</h2>
+            <input type="hidden" id="editId">
+            <div class="form-group"><label>菜单名称</label><input type="text" id="menuName" placeholder="如：素材管理"></div>
+            <div class="form-group">
+                <label>父级菜单</label>
+                <select id="parentId"><option value="0">顶级菜单</option></select>
+            </div>
+            <div class="form-group">
+                <label>菜单类型</label>
+                <select id="menuType">
+                    <option value="0">目录</option>
+                    <option value="1">菜单</option>
+                    <option value="2">按钮</option>
+                </select>
+            </div>
+            <div class="form-group"><label>路由路径</label><input type="text" id="path" placeholder="如：/media/list"></div>
+            <div class="form-group"><label>权限标识</label><input type="text" id="permission" placeholder="如：media:list"></div>
+            <div class="form-group"><label>图标</label><input type="text" id="icon" placeholder="如：folder"></div>
+            <div class="form-group"><label>排序</label><input type="number" id="sort" value="0"></div>
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-primary" onclick="saveMenu()">保存</button>
+                <button class="btn btn-secondary" onclick="closeEdit()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script>
+        let allMenus = [];
+
+        async function loadMenus() {
+            const r = await fetch('/api/system/menu/tree').then(x => x.json());
+            allMenus = r.data || [];
+            const body = document.getElementById('menuBody');
+            if (!allMenus.length) {
+                body.innerHTML = '<tr><td colspan="7" class="no-data">暂无菜单</td></tr>';
+                return;
+            }
+            const typeMap = { 0: '目录', 1: '菜单', 2: '按钮' };
+            const render = (menus, depth) => (menus || []).map(m => `
+                <tr>
+                    <td>${'&nbsp;&nbsp;'.repeat(depth)}${m.menuName || ''}</td>
+                    <td>${typeMap[m.menuType] || m.menuType}</td>
+                    <td>${m.path || ''}</td>
+                    <td>${m.permission || ''}</td>
+                    <td>${m.sort ?? 0}</td>
+                    <td>${m.status === 1 ? '正常' : '禁用'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="openEdit(${m.id})">编辑</button>
+                        <button class="btn btn-sm" onclick="deleteMenu(${m.id})">删除</button>
+                    </td>
+                </tr>` + render(m.children || [], depth + 1)).join('');
+            body.innerHTML = render(allMenus, 0);
+        }
+
+        function fillParentOptions(selectedId) {
+            const sel = document.getElementById('parentId');
+            const typeMap = { 0: '目录', 1: '菜单', 2: '按钮' };
+            const walk = (menus, depth) => (menus || []).map(m =>
+                `<option value="${m.id}" ${m.id === selectedId ? 'selected' : ''}>${'　'.repeat(depth)}${m.menuName}（${typeMap[m.menuType] || ''}）</option>`
+                + walk(m.children || [], depth + 1)).join('');
+            sel.innerHTML = '<option value="0">顶级菜单</option>' + walk(allMenus, 0);
+        }
+
+        function openCreate() {
+            document.getElementById('modalTitle').textContent = '新增菜单';
+            document.getElementById('editId').value = '';
+            document.getElementById('menuName').value = '';
+            document.getElementById('menuType').value = '1';
+            document.getElementById('path').value = '';
+            document.getElementById('permission').value = '';
+            document.getElementById('icon').value = '';
+            document.getElementById('sort').value = '0';
+            fillParentOptions(null);
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        async function openEdit(id) {
+            const r = await fetch('/api/system/menu/' + id).then(x => x.json());
+            if (r.code !== 200) { alert('加载失败'); return; }
+            const m = r.data;
+            document.getElementById('modalTitle').textContent = '编辑菜单';
+            document.getElementById('editId').value = m.id;
+            document.getElementById('menuName').value = m.menuName || '';
+            document.getElementById('menuType').value = m.menuType ?? 1;
+            document.getElementById('path').value = m.path || '';
+            document.getElementById('permission').value = m.permission || '';
+            document.getElementById('icon').value = m.icon || '';
+            document.getElementById('sort').value = m.sort ?? 0;
+            fillParentOptions(m.parentId || 0);
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEdit() { document.getElementById('editModal').style.display = 'none'; }
+
+        async function saveMenu() {
+            const id = document.getElementById('editId').value;
+            const payload = {
+                parentId: Number(document.getElementById('parentId').value) || 0,
+                menuName: document.getElementById('menuName').value,
+                menuType: parseInt(document.getElementById('menuType').value, 10),
+                path: document.getElementById('path').value,
+                permission: document.getElementById('permission').value,
+                icon: document.getElementById('icon').value,
+                sort: parseInt(document.getElementById('sort').value || '0', 10)
+            };
+            const url = id ? '/api/system/menu/' + id : '/api/system/menu';
+            const method = id ? 'PUT' : 'POST';
+            const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(x => x.json());
+            if (r.code === 200) { closeEdit(); loadMenus(); } else { alert(r.message || '保存失败'); }
+        }
+
+        async function deleteMenu(id) {
+            if (!confirm('确定删除该菜单吗？')) return;
+            const r = await fetch('/api/system/menu/' + id, { method: 'DELETE' }).then(x => x.json());
+            if (r.code === 200) { loadMenus(); } else { alert(r.message || '删除失败'); }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadMenus);
+    </script>
+</body>
+</html>

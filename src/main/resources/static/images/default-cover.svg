@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="225" viewBox="0 0 400 225">
+  <rect width="400" height="225" fill="#e0e2e5"/>
+  <g fill="#9aa0a6">
+    <rect x="150" y="80" width="100" height="70" rx="4"/>
+    <circle cx="170" cy="100" r="8"/>
+    <path d="M150 150 L185 120 L210 140 L235 118 L250 150 Z"/>
+  </g>
+  <text x="200" y="180" font-family="Arial, sans-serif" font-size="16" fill="#9aa0a6" text-anchor="middle">暂无封面</text>
+</svg>

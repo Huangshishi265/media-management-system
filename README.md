@@ -28,6 +28,12 @@
 - **分类素材数量**：柱状图展示分类统计
 - **热门素材排行**：TOP 10 热门素材列表
 
+### AI 智能能力（接入智谱 GLM）
+- **AI 智能识别**：上传图片一键生成标题/描述/标签/分类建议，自动回填表单（可改）
+- **规则兜底分类**：AI 分类名映射到现有分类树，匹配不上归「未分类」由人工选
+- **降级不阻塞**：AI 超时 / 未配置 Key 时自动降级为手动填写，入库主流程不受影响
+- **Bad Case 回收**：记录「AI 建议 vs 用户最终值」与采纳标记，供产品迭代复盘
+
 ### 缓存优化
 - **Redis 缓存**：热门素材、分类数据缓存
 - **缓存失效**：自动缓存更新与失效策略
@@ -179,6 +185,8 @@ docker-compose down
 | `/api/media/hot` | GET | 热门素材 |
 | `/api/media/recommend` | GET | 推荐素材 |
 | `/api/media/search/tag` | GET | 标签搜索 |
+| `/api/media/ai-analyze` | POST | AI 智能识别（上传图片，返回建议） |
+| `/api/media/ai-badcase` | POST | 记录 AI bad case（采纳/修改） |
 
 ### 分类管理接口
 
@@ -211,6 +219,16 @@ docker-compose down
 - `media` - 素材表
 - `media_category` - 素材分类表
 - `media_tag` - 标签表
+- `ai_bad_case` - AI 打标签 bad case 记录表
+
+## 🤖 AI 产品设计说明
+
+本项目接入了真实的 AI 能力（智谱 GLM 视觉模型），并落地了完整的产品设计闭环——数据清洗、
+模型选型、效果评估（采纳率）、成本控制、异常降级、Bad Case 回收、规则 vs 模型边界等。
+
+配置方式：在 `application.yml` 的 `ai.zhipu.api-key` 填入智谱 API Key（https://open.bigmodel.cn 免费申请）。
+
+详细设计文档：[docs/ai-design.md](docs/ai-design.md)
 
 ## 🧪 测试
 

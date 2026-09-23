@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分类管理 - 媒体素材管理系统</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand"><a href="/">媒体素材管理系统</a></div>
+        <div class="nav-links">
+            <a href="/">首页</a>
+            <a href="/media/list">素材库</a>
+            <a href="/dashboard">仪表盘</a>
+            <a href="/media/category">分类管理</a>
+            <a href="/system/user">用户管理</a>
+            <a href="/system/role">角色管理</a>
+            <a href="/system/menu">菜单管理</a>
+        </div>
+        <div class="nav-user"><a href="#" onclick="logout()">退出</a></div>
+    </nav>
+
+    <main class="dashboard-content">
+        <div class="dashboard-header">
+            <h1>分类管理</h1>
+            <p>维护素材分类，支持新增、编辑、删除</p>
+        </div>
+
+        <div class="search-section">
+            <button class="btn btn-primary" onclick="openCreate()">+ 新增分类</button>
+        </div>
+
+        <div class="hot-media-section">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>分类名称</th>
+                        <th>编码</th>
+                        <th>排序</th>
+                        <th>素材数</th>
+                        <th>状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="categoryBody">
+                    <tr><td colspan="7" class="loading">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- 编辑模态框 -->
+    <div id="editModal" class="modal" style="display:none;">
+        <div class="login-container" style="background:#fff;">
+            <h2 id="modalTitle" style="margin-bottom:20px;">新增分类</h2>
+            <input type="hidden" id="editId">
+            <div class="form-group"><label>分类名称</label><input type="text" id="categoryName" placeholder="如：风景"></div>
+            <div class="form-group"><label>分类编码</label><input type="text" id="categoryCode" placeholder="如：scenery"></div>
+            <div class="form-group"><label>排序</label><input type="number" id="sort" value="0"></div>
+            <div class="form-group">
+                <label>状态</label>
+                <select id="status"><option value="1">启用</option><option value="0">禁用</option></select>
+            </div>
+            <div style="display:flex;gap:10px;">
+                <button class="btn btn-primary" onclick="saveCategory()">保存</button>
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/auth.js"></script>
+    <script>
+        async function loadCategories() {
+            const r = await fetch('/api/media/category/list').then(x => x.json());
+            const body = document.getElementById('categoryBody');
+            if (r.code !== 200 || !r.data || !r.data.length) {
+                body.innerHTML = '<tr><td colspan="7" class="no-data">暂无分类</td></tr>';
+                return;
+            }
+            body.innerHTML = r.data.map(c => `
+                <tr>
+                    <td>${c.id}</td>
+                    <td>${c.categoryName || ''}</td>
+                    <td>${c.categoryCode || ''}</td>
+                    <td>${c.sort ?? 0}</td>
+                    <td>${c.mediaCount ?? 0}</td>
+                    <td>${c.status === 1 ? '启用' : '禁用'}</td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="openEdit(${c.id})">编辑</button>
+                        <button class="btn btn-sm" onclick="deleteCategory(${c.id})">删除</button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        function openCreate() {
+            document.getElementById('modalTitle').textContent = '新增分类';
+            document.getElementById('editId').value = '';
+            document.getElementById('categoryName').value = '';
+            document.getElementById('categoryCode').value = '';
+            document.getElementById('sort').value = '0';
+            document.getElementById('status').value = '1';
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        async function openEdit(id) {
+            const r = await fetch('/api/media/category/' + id).then(x => x.json());
+            if (r.code !== 200) { alert('加载失败'); return; }
+            const c = r.data;
+            document.getElementById('modalTitle').textContent = '编辑分类';
+            document.getElementById('editId').value = c.id;
+            document.getElementById('categoryName').value = c.categoryName || '';
+            document.getElementById('categoryCode').value = c.categoryCode || '';
+            document.getElementById('sort').value = c.sort ?? 0;
+            document.getElementById('status').value = c.status;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        async function saveCategory() {
+            const id = document.getElementById('editId').value;
+            const payload = {
+                categoryName: document.getElementById('categoryName').value,
+                categoryCode: document.getElementById('categoryCode').value,
+                sort: parseInt(document.getElementById('sort').value || '0', 10),
+                status: parseInt(document.getElementById('status').value, 10)
+            };
+            const url = id ? '/api/media/category/' + id : '/api/media/category';
+            const method = id ? 'PUT' : 'POST';
+            const r = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(x => x.json());
+            if (r.code === 200) { closeModal(); loadCategories(); } else { alert(r.message || '保存失败'); }
+        }
+
+        async function deleteCategory(id) {
+            if (!confirm('确定删除该分类吗？')) return;
+            const r = await fetch('/api/media/category/' + id, { method: 'DELETE' }).then(x => x.json());
+            if (r.code === 200) { loadCategories(); } else { alert(r.message || '删除失败'); }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadCategories);
+    </script>
+</body>
+</html>

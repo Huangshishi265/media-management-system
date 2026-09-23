@@ -2,6 +2,8 @@ package com.mediams.controller;
 
 import com.mediams.dto.Result;
 import com.mediams.entity.Menu;
+import com.mediams.entity.User;
+import com.mediams.mapper.UserMapper;
 import com.mediams.service.MenuService;
 import com.mediams.util.SecurityUtil;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import java.util.List;
 public class MenuController {
 
     private final MenuService menuService;
+    private final UserMapper userMapper;
 
     /**
      * 查询菜单树
@@ -37,8 +40,11 @@ public class MenuController {
         if (username == null) {
             return Result.error(401, "未登录");
         }
-        // TODO: 根据用户名查询用户ID
-        List<Menu> menus = menuService.getMenusByUserId(1L);
+        User user = userMapper.selectByUsername(username);
+        if (user == null) {
+            return Result.error(404, "用户不存在");
+        }
+        List<Menu> menus = menuService.getMenusByUserId(user.getId());
         return Result.success(menus);
     }
 

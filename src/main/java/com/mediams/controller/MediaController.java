@@ -1,8 +1,12 @@
 package com.mediams.controller;
 
+import com.mediams.ai.AiAnalyzeService;
+import com.mediams.ai.AiTagResult;
 import com.mediams.dto.PageResult;
 import com.mediams.dto.Result;
+import com.mediams.entity.AiBadCase;
 import com.mediams.entity.Media;
+import com.mediams.mapper.AiBadCaseMapper;
 import com.mediams.service.MediaService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +23,8 @@ import java.util.List;
 public class MediaController {
 
     private final MediaService mediaService;
+    private final AiAnalyzeService aiAnalyzeService;
+    private final AiBadCaseMapper aiBadCaseMapper;
 
     /**
      * 分页查询素材列表
@@ -57,6 +63,25 @@ public class MediaController {
             @RequestParam(required = false) String tags) {
         Media media = mediaService.uploadMedia(file, title, description, categoryId, tags);
         return Result.success("上传成功", media);
+    }
+
+    /**
+     * AI 智能识别：对图片生成标题/描述/标签/分类建议
+     * 失败时返回 fallback=true（不阻塞上传主流程），由前端提示手动填写
+     */
+    @PostMapping("/ai-analyze")
+    public Result<AiTagResult> aiAnalyze(@RequestParam("file") MultipartFile file) {
+        AiTagResult result = aiAnalyzeService.analyze(file);
+        return Result.success(result);
+    }
+
+    /**
+     * 记录 AI 打标签 bad case：用户采纳或修改 AI 建议，供产品迭代复盘
+     */
+    @PostMapping("/ai-badcase")
+    public Result<Void> recordAiBadCase(@RequestBody AiBadCase badCase) {
+        aiBadCaseMapper.insert(badCase);
+        return Result.success("已记录");
     }
 
     /**

@@ -131,6 +131,22 @@ CREATE TABLE IF NOT EXISTS media_tag (
     deleted TINYINT DEFAULT 0 COMMENT '逻辑删除'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='标签表';
 
+-- AI 打标签 bad case 记录表（用于产品迭代复盘：AI 建议 vs 用户最终值）
+CREATE TABLE IF NOT EXISTS ai_bad_case (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '记录ID',
+    media_id BIGINT COMMENT '关联素材ID（可选）',
+    ai_title VARCHAR(200) COMMENT 'AI 建议标题',
+    ai_description TEXT COMMENT 'AI 建议描述',
+    ai_tags VARCHAR(500) COMMENT 'AI 建议标签（逗号分隔）',
+    ai_category VARCHAR(50) COMMENT 'AI 建议分类名',
+    final_title VARCHAR(200) COMMENT '用户最终标题',
+    final_description TEXT COMMENT '用户最终描述',
+    final_tags VARCHAR(500) COMMENT '用户最终标签（逗号分隔）',
+    final_category_id BIGINT COMMENT '用户最终分类ID',
+    adopted TINYINT DEFAULT 1 COMMENT '是否采纳AI：1-采纳，0-修改',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '记录时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI打标签bad case记录表';
+
 -- ============================================
 -- 初始化数据
 -- ============================================

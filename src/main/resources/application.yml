@@ -125,3 +125,13 @@ system:
   name: 媒体素材管理系统
   version: 1.0.0
   copyright: © 2024 Media Management System
+
+# AI 配置（智谱 BigModel，永久免费，OpenAI 兼容）
+ai:
+  zhipu:
+    api-key: your_zhipu_api_key
+    base-url: https://open.bigmodel.cn/api/paas/v4
+    vision-model: glm-4v-flash
+    text-model: glm-4-flash
+    timeout-ms: 15000
+    max-tokens: 512

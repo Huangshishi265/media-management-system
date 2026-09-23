@@ -92,7 +92,7 @@ public class RoleController {
      */
     @GetMapping("/{id}/menus")
     public Result<List<Long>> getMenus(@PathVariable Long id) {
-        // TODO: 实现获取角色菜单列表
-        return Result.success(null);
+        List<Long> menuIds = roleService.getMenusByRoleId(id);
+        return Result.success(menuIds);
     }
 }

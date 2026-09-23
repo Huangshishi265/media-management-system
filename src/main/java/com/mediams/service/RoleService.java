@@ -40,4 +40,9 @@ public interface RoleService extends IService<Role> {
      * 分配菜单权限
      */
     boolean assignMenus(Long roleId, Long[] menuIds);
+
+    /**
+     * 查询角色的菜单ID列表
+     */
+    List<Long> getMenusByRoleId(Long roleId);
 }

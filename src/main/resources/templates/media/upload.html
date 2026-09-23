@@ -68,13 +68,18 @@
                     </div>
                 </div>
                 
-                <button type="submit" class="btn btn-primary btn-large">上传素材</button>
+                <div class="form-actions">
+                    <button type="button" id="aiAnalyzeBtn" class="btn btn-secondary">🤖 AI 智能识别</button>
+                    <button type="submit" class="btn btn-primary btn-large">上传素材</button>
+                </div>
             </form>
         </div>
     </main>
 
+    <script src="/js/auth.js"></script>
     <script>
         let selectedFile = null;
+        let aiResult = null;
         
         // 点击上传区域
         document.getElementById('uploadArea').addEventListener('click', () => {
@@ -135,6 +140,74 @@
             document.getElementById('filePreview').style.display = 'none';
         }
         
+        // AI 智能识别：调后端视觉模型，自动回填标题/描述/标签/分类
+        document.getElementById('aiAnalyzeBtn').addEventListener('click', async () => {
+            if (!selectedFile) {
+                alert('请先选择图片文件');
+                return;
+            }
+            if (!selectedFile.type.startsWith('image/')) {
+                alert('AI 识别仅支持图片文件');
+                return;
+            }
+            const btn = document.getElementById('aiAnalyzeBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ AI 识别中...';
+            try {
+                const fd = new FormData();
+                fd.append('file', selectedFile);
+                const resp = await fetch('/api/media/ai-analyze', { method: 'POST', body: fd });
+                const result = await resp.json();
+                if (result.code === 200) {
+                    const d = result.data;
+                    if (d.fallback) {
+                        alert(d.fallbackMessage || 'AI 识别失败，请手动填写');
+                    } else {
+                        if (d.title) document.getElementById('title').value = d.title;
+                        if (d.description) document.getElementById('description').value = d.description;
+                        if (d.tags && d.tags.length) document.getElementById('tags').value = d.tags.join(',');
+                        if (d.categoryId) document.getElementById('categoryId').value = String(d.categoryId);
+                        aiResult = { title: d.title || '', description: d.description || '', tags: d.tags || [], categoryId: d.categoryId, categoryName: d.categoryName || '' };
+                        alert('AI 识别完成，已自动回填，可手动修改后再上传');
+                    }
+                } else {
+                    alert(result.message || 'AI 识别失败，请手动填写');
+                }
+            } catch (e) {
+                alert('AI 识别失败，请手动填写');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🤖 AI 智能识别';
+            }
+        });
+
+        // 记录 AI 打标签 bad case（用户采纳或修改 AI 建议），供复盘迭代
+        async function recordBadCase() {
+            if (!aiResult) return;
+            const finalTitle = document.getElementById('title').value;
+            const finalDesc = document.getElementById('description').value;
+            const finalTags = document.getElementById('tags').value;
+            const finalCat = document.getElementById('categoryId').value;
+            const adopted = (finalTitle === aiResult.title && finalTags === aiResult.tags.join(',') && String(aiResult.categoryId || '') === finalCat) ? 1 : 0;
+            try {
+                await fetch('/api/media/ai-badcase', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        aiTitle: aiResult.title,
+                        aiDescription: aiResult.description,
+                        aiTags: aiResult.tags.join(','),
+                        aiCategory: aiResult.categoryName,
+                        finalTitle: finalTitle,
+                        finalDescription: finalDesc,
+                        finalTags: finalTags,
+                        finalCategoryId: finalCat ? Number(finalCat) : null,
+                        adopted: adopted
+                    })
+                });
+            } catch (e) { /* bad case 记录失败不阻塞上传 */ }
+        }
+
         // 上传表单提交
         document.getElementById('uploadForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -165,6 +238,7 @@
                 
                 const result = await response.json();
                 if (result.code === 200) {
+                    await recordBadCase();
                     alert('上传成功！');
                     window.location.href = '/media/list';
                 } else {

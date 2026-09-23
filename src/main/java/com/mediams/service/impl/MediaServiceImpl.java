@@ -97,6 +97,11 @@ public class MediaServiceImpl extends ServiceImpl<MediaMapper, Media> implements
                     .isRecommend(0)
                     .build();
 
+            // 图片类型直接使用原图作为封面（前端以 /uploads/ 前缀访问）
+            if ("image".equals(mediaType)) {
+                media.setCoverPath("/uploads/" + relativePath);
+            }
+
             // 设置创建人
             String username = SecurityUtil.getCurrentUsername();
             if (username != null) {
